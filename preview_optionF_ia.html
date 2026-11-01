@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="hybrid">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prévisualisation — Option F : Résumé IA des Actualités (Gemini)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-app: #f8fafc;
+            --bg-header: #0f172a;
+            --bg-card: #ffffff;
+            --bg-card-subtle: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --text-inverse: #ffffff;
+            --brand-primary: #0284c7;
+            --brand-primary-light: #e0f2fe;
+            --color-success: #059669;
+            --color-success-bg: rgba(5, 150, 105, 0.08);
+            --color-danger: #dc2626;
+            --color-danger-bg: rgba(220, 38, 38, 0.08);
+            --font-family: 'Inter', -apple-system, sans-serif;
+            --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* ==============================
+           HEADER — Copie fidèle du projet
+        ============================== */
+        .app-header {
+            background-color: var(--bg-header);
+            color: var(--text-inverse);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 56px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .header-left { display: flex; align-items: center; gap: 24px; }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .logo-badge {
+            width: 34px; height: 34px; border-radius: 8px;
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 13px; color: white;
+        }
+        .brand-title { font-size: 14px; font-weight: 800; letter-spacing: 1px; }
+        .brand-subtitle { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1.5px; text-transform: uppercase; display: block; }
+
+        .nav-tabs { display: flex; gap: 4px; }
+        .nav-tab {
+            padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer;
+            font-size: 12px; font-weight: 500; font-family: var(--font-family);
+            color: rgba(255,255,255,0.5); background: transparent;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .nav-tab.active {
+            background: rgba(255,255,255,0.1); color: white;
+        }
+
+        /* ==============================
+           BANNER DE PRÉVISUALISATION
+        ============================== */
+        .preview-banner {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            text-align: center;
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .preview-banner .badge-new {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ==============================
+           LAYOUT PRINCIPAL
+        ============================== */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 0;
+            height: calc(100vh - 96px);
+            overflow: hidden;
+        }
+
+        /* Colonne gauche — tableau simplifié */
+        .left-panel {
+            padding: 16px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 13px; font-weight: 700;
+            color: var(--text-primary);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .badge-count {
+            padding: 2px 8px; border-radius: 99px;
+            background: var(--brand-primary-light);
+            color: var(--brand-primary);
+            font-size: 11px; font-weight: 600;
+        }
+        .realtime-dot {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 11px; color: var(--color-success);
+        }
+        .dot-pulse {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--color-success);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.3); }
+        }
+
+        .portfolio-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .portfolio-table thead th {
+            padding: 8px 10px; text-align: right;
+            color: var(--text-muted); font-weight: 600; font-size: 10.5px;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-card-subtle);
+        }
+        .portfolio-table thead th:first-child { text-align: left; }
+        .portfolio-table tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer; transition: background 0.15s;
+        }
+        .portfolio-table tbody tr:hover { background: #f0f9ff; }
+        .portfolio-table tbody tr.selected { background: #e0f2fe; }
+        .portfolio-table td { padding: 10px 10px; text-align: right; }
+        .portfolio-table td:first-child { text-align: left; }
+        .stock-name { font-weight: 700; font-size: 12px; color: var(--text-primary); }
+        .stock-ticker { font-size: 10px; color: var(--brand-primary); font-weight: 600; }
+        .positive { color: var(--color-success); font-weight: 600; }
+        .negative { color: var(--color-danger); font-weight: 600; }
+
+        /* ==============================
+           PANNEAU DROIT — WIDGETS
+        ============================== */
+        .right-panel {
+            display: flex; flex-direction: column;
+            overflow-y: auto;
+            background: var(--bg-card-subtle);
+        }
+
+        .widget {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 16px;
+        }
+
+        .widget-title {
+            font-size: 11px; font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        /* Synthèse portefeuille mini */
+        .synth-value { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+        .synth-perf {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 99px;
+            background: var(--color-success-bg); color: var(--color-success);
+            font-size: 12px; font-weight: 700; margin-left: 8px;
+        }
+        .synth-sub {
+            font-size: 11px; color: var(--text-muted); margin-top: 4px;
+        }
+        .synth-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 8px; margin-top: 10px;
+        }
+        .synth-item {
+            background: var(--bg-card-subtle); border-radius: var(--radius-sm);
+            padding: 8px 10px;
+        }
+        .synth-item-label { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+        .synth-item-value { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
+
+        /* ==============================
+           🤖 CARD IA GEMINI — NOUVEAU !
+        ============================== */
+        .ai-widget {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 16px;
+            position: relative;
+        }
+
+        .ai-widget-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .ai-widget-title {
+            display: flex; align-items: center; gap: 7px;
+            font-size: 11px; font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .ai-gemini-icon {
+            width: 20px; height: 20px; border-radius: 5px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; flex-shrink: 0;
+        }
+
+        .ai-refresh-btn {
+            display: flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 99px;
+            border: 1px solid #e0e7ff; background: #f0f0ff;
+            color: #4f46e5; font-size: 10px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; font-family: var(--font-family);
+        }
+        .ai-refresh-btn:hover { background: #e0e7ff; }
+
+        /* Sélecteur de valeur */
+        .ai-ticker-tabs {
+            display: flex; gap: 4px; margin-bottom: 12px;
+            overflow-x: auto; padding-bottom: 4px;
+        }
+        .ai-ticker-tab {
+            flex-shrink: 0;
+            padding: 4px 10px; border-radius: 99px;
+            border: 1px solid var(--border-color);
+            background: transparent; color: var(--text-secondary);
+            font-size: 11px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; font-family: var(--font-family);
+        }
+        .ai-ticker-tab.active {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white; border-color: transparent;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+        }
+        .ai-ticker-tab:hover:not(.active) {
+            border-color: #a5b4fc; background: #f0f0ff; color: #4f46e5;
+        }
+
+        /* Card résumé IA */
+        .ai-summary-card {
+            background: linear-gradient(135deg, #fafafe 0%, #f5f3ff 100%);
+            border: 1px solid #e0e7ff;
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .ai-summary-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0;
+            width: 3px; height: 100%;
+            background: linear-gradient(180deg, #4f46e5, #7c3aed);
+        }
+
+        .ai-stock-header {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 10px;
+        }
+        .ai-stock-logo {
+            width: 28px; height: 28px; border-radius: 7px;
+            background: #f0f2ff; border: 1px solid #e0e7ff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; color: #4f46e5;
+        }
+        .ai-stock-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+        .ai-stock-ticker { font-size: 10px; color: #7c3aed; font-weight: 600; }
+
+        .ai-sentiment {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
+            margin-left: auto;
+        }
+        .ai-sentiment.positive {
+            background: var(--color-success-bg); color: var(--color-success);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+        .ai-sentiment.neutral {
+            background: rgba(245, 158, 11, 0.08); color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        .ai-sentiment.negative {
+            background: var(--color-danger-bg); color: var(--color-danger);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        /* Le texte du résumé */
+        .ai-summary-text {
+            font-size: 12.5px; line-height: 1.65;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        .ai-summary-text strong { color: var(--text-primary); font-weight: 600; }
+
+        /* Points clés */
+        .ai-key-points {
+            display: flex; flex-direction: column; gap: 5px;
+            margin-bottom: 10px;
+        }
+        .ai-key-point {
+            display: flex; align-items: flex-start; gap: 7px;
+            font-size: 11.5px; color: var(--text-secondary);
+        }
+        .ai-key-point-icon {
+            width: 16px; height: 16px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; flex-shrink: 0; margin-top: 1px;
+        }
+        .ai-key-point-icon.up { background: var(--color-success-bg); color: var(--color-success); }
+        .ai-key-point-icon.down { background: var(--color-danger-bg); color: var(--color-danger); }
+        .ai-key-point-icon.neutral { background: #fef3c7; color: #d97706; }
+
+        /* Sources citées */
+        .ai-sources {
+            display: flex; align-items: center; gap: 6px;
+            flex-wrap: wrap;
+            padding-top: 8px;
+            border-top: 1px solid #e0e7ff;
+        }
+        .ai-sources-label { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+        .ai-source-tag {
+            padding: 2px 7px; border-radius: 4px;
+            background: white; border: 1px solid #e0e7ff;
+            font-size: 10px; color: var(--text-secondary); font-weight: 500;
+        }
+
+        /* Footer info */
+        .ai-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 10px;
+        }
+        .ai-timestamp { font-size: 10px; color: var(--text-muted); }
+        .ai-powered {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 10px; color: var(--text-muted);
+        }
+        .ai-powered span {
+            font-weight: 600;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* Loading state */
+        .ai-loading {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 20px; gap: 10px;
+        }
+        .ai-spinner {
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 2px solid #e0e7ff;
+            border-top-color: #4f46e5;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .ai-loading-text { font-size: 11px; color: var(--text-muted); text-align: center; }
+
+        /* ==============================
+           SECTION NEWS MINI
+        ============================== */
+        .news-mini-list { display: flex; flex-direction: column; gap: 0; }
+        .news-item {
+            padding: 10px 0; border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .news-item:last-child { border-bottom: none; }
+        .news-item-title {
+            font-size: 11.5px; font-weight: 500; line-height: 1.5;
+            color: var(--text-primary); margin-bottom: 4px;
+        }
+        .news-item-meta {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 10px; color: var(--text-muted);
+        }
+        .news-portfolio-badge {
+            padding: 1px 5px; border-radius: 3px;
+            background: var(--color-success-bg); color: var(--color-success);
+            font-size: 9px; font-weight: 700;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="brand">
+                <div class="logo-badge">EB</div>
+                <div class="brand-text">
+                    <span class="brand-title">EASY BOURSE</span>
+                    <span class="brand-subtitle">Portail Investisseur</span>
+                </div>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active">
+                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    Portefeuilles
+                </button>
+                <button class="nav-tab">
+                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z"/></svg>
+                    Actualités
+                </button>
+            </nav>
+        </div>
+        <div style="color:rgba(255,255,255,0.4); font-size:12px;">Compte de démonstration · Projet public</div>
+    </header>
+
+    <!-- Bannière prévisualisation -->
+    <div class="preview-banner">
+        <span class="badge-new">✦ Nouveau</span>
+        Prévisualisation de l'<strong>Option F — Résumé IA par valeur (Gemini)</strong> · Ce widget sera intégré dans le panneau latéral droit
+    </div>
+
+    <!-- Layout -->
+    <div class="main-layout">
+
+        <!-- Panneau Gauche — Tableau positions (simplifié) -->
+        <div class="left-panel">
+            <div class="section-header">
+                <div class="section-title">
+                    Positions Actives <span class="badge-count">7 Valeurs</span>
+                </div>
+                <div class="realtime-dot">
+                    <div class="dot-pulse"></div>
+                    Prix temps réel
+                </div>
+            </div>
+
+            <table class="portfolio-table">
+                <thead>
+                    <tr>
+                        <th>Valeur / Nom</th>
+                        <th>Qté</th>
+                        <th>PRU</th>
+                        <th>Cours</th>
+                        <th>Var. %</th>
+                        <th>+/- Value</th>
+                        <th>Valorisation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="selected">
+                        <td><div class="stock-name">AIR LIQUIDE</div><div class="stock-ticker">AI.PA</div></td>
+                        <td>65</td><td>164,80 €</td><td>172,30 €</td>
+                        <td class="positive">+0,85%</td>
+                        <td class="positive">+487,50 € <br><small>(+4,55%)</small></td>
+                        <td>11 199,50 €</td>
+                    </tr>
+                    <tr>
+                        <td><div class="stock-name">LVMH</div><div class="stock-ticker">MC.PA</div></td>
+                        <td>20</td><td>650,00 €</td><td>685,20 €</td>
+                        <td class="positive">+1,20%</td>
+                        <td class="positive">+704,00 € <br><small>(+5,42%)</small></td>
+                        <td>13 704,00 €</td>
+                    </tr>
+                    <tr>
+                        <td><div class="stock-name">SCHNEIDER ELECTRIC</div><div class="stock-ticker">SU.PA</div></td>
+                        <td>40</td><td>215,00 €</td><td>228,40 €</td>
+                        <td class="positive">+1,10%</td>
+                        <td class="positive">+536,00 € <br><small>(+6,23%)</small></td>
+                        <td>9 136,00 €</td>
+                    </tr>
+                    <tr>
+                        <td><div class="stock-name">SANOFI</div><div class="stock-ticker">SAN.PA</div></td>
+                        <td>65</td><td>94,00 €</td><td>92,50 €</td>
+                        <td class="negative">-0,40%</td>
+                        <td class="negative">-97,50 € <br><small>(-1,60%)</small></td>
+                        <td>6 012,50 €</td>
+                    </tr>
+                    <tr>
+                        <td><div class="stock-name">L'ORÉAL</div><div class="stock-ticker">OR.PA</div></td>
+                        <td>15</td><td>395,00 €</td><td>378,50 €</td>
+                        <td class="negative">-1,20%</td>
+                        <td class="negative">-247,50 € <br><small>(-4,18%)</small></td>
+                        <td>5 677,50 €</td>
+                    </tr>
+                    <tr>
+                        <td><div class="stock-name">TOTAL ENERGIES</div><div class="stock-ticker">TTE.PA</div></td>
+                        <td>80</td><td>58,50 €</td><td>61,20 €</td>
+                        <td class="positive">+0,50%</td>
+                        <td class="positive">+216,00 € <br><small>(+4,62%)</small></td>
+                        <td>4 896,00 €</td>
+                    </tr>
+                    <tr>
+                        <td><div class="stock-name">HERMÈS</div><div class="stock-ticker">RMS.PA</div></td>
+                        <td>5</td><td>2 100,00 €</td><td>2 245,00 €</td>
+                        <td class="positive">+0,32%</td>
+                        <td class="positive">+725,00 € <br><small>(+6,90%)</small></td>
+                        <td>11 225,00 €</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Panneau Droit — Widgets -->
+        <div class="right-panel">
+
+            <!-- Synthèse Portefeuille (existant) -->
+            <div class="widget">
+                <div class="widget-title">
+                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    Synthèse Portefeuille
+                </div>
+                <div>
+                    <span class="synth-value">61 850,50 €</span>
+                    <span class="synth-perf">▲ +2 323,50 € (+3,90%)</span>
+                </div>
+                <div class="synth-sub">Valorisation totale · Mise à jour en temps réel</div>
+                <div class="synth-grid">
+                    <div class="synth-item">
+                        <div class="synth-item-label">Solde Liquidités</div>
+                        <div class="synth-item-value">2 150,00 €</div>
+                    </div>
+                    <div class="synth-item">
+                        <div class="synth-item-label">Dividendes Est.</div>
+                        <div class="synth-item-value" style="color:var(--color-success)">+1 240 € / an</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====================================
+                 🤖 WIDGET IA GEMINI — FONCTIONNALITÉ F
+            ==================================== -->
+            <div class="ai-widget">
+                <div class="ai-widget-header">
+                    <div class="ai-widget-title">
+                        <div class="ai-gemini-icon">✦</div>
+                        Analyse IA du Jour
+                    </div>
+                    <button class="ai-refresh-btn" id="refreshBtn" onclick="showLoading()">
+                        <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        Rafraîchir
+                    </button>
+                </div>
+
+                <!-- Sélecteur de valeur -->
+                <div class="ai-ticker-tabs">
+                    <button class="ai-ticker-tab active" onclick="selectTicker(this, 'AI.PA')">AI.PA</button>
+                    <button class="ai-ticker-tab" onclick="selectTicker(this, 'MC.PA')">MC.PA</button>
+                    <button class="ai-ticker-tab" onclick="selectTicker(this, 'SU.PA')">SU.PA</button>
+                    <button class="ai-ticker-tab" onclick="selectTicker(this, 'SAN.PA')">SAN.PA</button>
+                    <button class="ai-ticker-tab" onclick="selectTicker(this, 'OR.PA')">OR.PA</button>
+                    <button class="ai-ticker-tab" onclick="selectTicker(this, 'TTE.PA')">TTE.PA</button>
+                </div>
+
+                <!-- Contenu IA -->
+                <div id="aiContent">
+                    <!-- Card résumé IA — État affiché (Air Liquide) -->
+                    <div class="ai-summary-card">
+                        <div class="ai-stock-header">
+                            <div class="ai-stock-logo">AL</div>
+                            <div>
+                                <div class="ai-stock-name">Air Liquide</div>
+                                <div class="ai-stock-ticker">AI.PA · Énergie & Matériaux</div>
+                            </div>
+                            <div class="ai-sentiment positive">▲ Positif</div>
+                        </div>
+
+                        <div class="ai-summary-text">
+                            Air Liquide maintient une <strong>trajectoire haussière solide</strong> ce trimestre, 
+                            portée par la <strong>forte demande en hydrogène industriel</strong> en Europe et par ses 
+                            contrats long terme dans le secteur de la santé. Les analystes de Goldman Sachs ont 
+                            révisé leur objectif de cours à <strong>195 € (+13%)</strong> sur 12 mois après les 
+                            résultats semestriels meilleurs qu'attendus.
+                        </div>
+
+                        <div class="ai-key-points">
+                            <div class="ai-key-point">
+                                <div class="ai-key-point-icon up">↑</div>
+                                <span>Contrat hydrogène de 2 Mds€ signé avec ArcelorMittal (croissance bas-carbone)</span>
+                            </div>
+                            <div class="ai-key-point">
+                                <div class="ai-key-point-icon up">↑</div>
+                                <span>Révision à la hausse des objectifs annuels de croissance du bénéfice net (+8-10%)</span>
+                            </div>
+                            <div class="ai-key-point">
+                                <div class="ai-key-point-icon neutral">–</div>
+                                <span>Légère pression sur les marges en Asie-Pacifique due aux coûts énergétiques</span>
+                            </div>
+                        </div>
+
+                        <div class="ai-sources">
+                            <span class="ai-sources-label">Sources :</span>
+                            <span class="ai-source-tag">Les Échos</span>
+                            <span class="ai-source-tag">Boursorama</span>
+                            <span class="ai-source-tag">Zone Bourse</span>
+                        </div>
+                    </div>
+
+                    <div class="ai-footer">
+                        <div class="ai-timestamp">⏱ Mis à jour il y a 3 min</div>
+                        <div class="ai-powered">via <span>Gemini API</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News liées -->
+            <div class="widget">
+                <div class="widget-title">
+                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z"/></svg>
+                    Actualités RSS liées
+                </div>
+                <div class="news-mini-list">
+                    <div class="news-item">
+                        <div class="news-item-title">Air Liquide remporte un contrat historique pour la décarbonation de l'acier en Europe</div>
+                        <div class="news-item-meta">Les Échos · il y a 2h <span class="news-portfolio-badge">✓ Portefeuille</span></div>
+                    </div>
+                    <div class="news-item">
+                        <div class="news-item-title">CAC 40 : les valeurs industrielles résistent malgré la hausse des taux</div>
+                        <div class="news-item-meta">Boursorama · il y a 4h</div>
+                    </div>
+                    <div class="news-item">
+                        <div class="news-item-title">Air Liquide relève ses prévisions annuelles après un semestriel solide</div>
+                        <div class="news-item-meta">Yahoo Finance · il y a 6h <span class="news-portfolio-badge">✓ Portefeuille</span></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Données simulées par ticker pour la démo
+        const aiData = {
+            'AI.PA': {
+                logo: 'AL', name: 'Air Liquide', ticker: 'AI.PA', sector: 'Énergie & Matériaux',
+                sentiment: 'positive', sentimentLabel: '▲ Positif',
+                summary: `Air Liquide maintient une <strong>trajectoire haussière solide</strong> ce trimestre, 
+                    portée par la <strong>forte demande en hydrogène industriel</strong> en Europe et par ses 
+                    contrats long terme dans le secteur de la santé. Les analystes de Goldman Sachs ont 
+                    révisé leur objectif de cours à <strong>195 € (+13%)</strong> sur 12 mois.`,
+                points: [
+                    { type: 'up', text: 'Contrat hydrogène de 2 Mds€ signé avec ArcelorMittal (croissance bas-carbone)' },
+                    { type: 'up', text: 'Révision à la hausse des objectifs annuels de croissance du bénéfice net (+8-10%)' },
+                    { type: 'neutral', text: 'Légère pression sur les marges en Asie-Pacifique due aux coûts énergétiques' },
+                ],
+                sources: ['Les Échos', 'Boursorama', 'Zone Bourse'], updated: '3 min'
+            },
+            'MC.PA': {
+                logo: 'LV', name: 'LVMH', ticker: 'MC.PA', sector: 'Consommation & Luxe',
+                sentiment: 'positive', sentimentLabel: '▲ Positif',
+                summary: `LVMH confirme sa <strong>résilience face au ralentissement du marché chinois</strong>. 
+                    La maison profite d'une forte reprise du tourisme en Europe et aux États-Unis. 
+                    Les ventes Mode & Maroquinerie restent <strong>portées par la demande américaine</strong> et 
+                    les nouvelles collections Louis Vuitton Automne-Hiver ont reçu un accueil exceptionnel.`,
+                points: [
+                    { type: 'up', text: 'Croissance organique de +6% au T3, au-dessus du consensus des analystes' },
+                    { type: 'up', text: 'Dividende exceptionnel de 5€ par action annoncé pour le prochain semestre' },
+                    { type: 'neutral', text: 'Marché chinois sous pression avec -3% de ventes en Asie-Pacifique' },
+                ],
+                sources: ['Les Échos', 'Le Figaro'], updated: '7 min'
+            },
+            'SU.PA': {
+                logo: 'SE', name: 'Schneider Electric', ticker: 'SU.PA', sector: 'Technologie',
+                sentiment: 'positive', sentimentLabel: '▲ Positif',
+                summary: `Schneider Electric bénéficie d'une <strong>demande structurelle liée à la transition énergétique</strong> 
+                    et au boom des datacenters en Europe. La multiplication des contrats pour l'efficacité 
+                    énergétique des grands groupes industriels soutient des perspectives de croissance à deux chiffres 
+                    pour 2026 selon les analystes de JP Morgan (<strong>objectif 270 €</strong>).`,
+                points: [
+                    { type: 'up', text: 'Hausse de 22% du carnet de commandes sur les solutions datacenters' },
+                    { type: 'up', text: 'Acquisition stratégique d\'une entreprise d\'IA énergétique valorisée 800 M€' },
+                    { type: 'up', text: 'Marges opérationnelles en hausse de 1,5 pts grâce à l\'automatisation' },
+                ],
+                sources: ['Les Échos', 'BFM Bourse', 'Reuters'], updated: '12 min'
+            },
+            'SAN.PA': {
+                logo: 'SA', name: 'Sanofi', ticker: 'SAN.PA', sector: 'Santé',
+                sentiment: 'neutral', sentimentLabel: '— Neutre',
+                summary: `Sanofi fait face à une <strong>période de transition</strong> après la déception sur 
+                    les résultats de l'essai clinique de phase 3 du totukinumab. Le pipeline reste solide avec 
+                    le dupilumab (Dupixent) qui continue de croître fortement, mais les incertitudes 
+                    réglementaires aux États-Unis <strong>limitent le potentiel de hausse à court terme</strong>.`,
+                points: [
+                    { type: 'up', text: 'Dupixent : +26% de croissance du CA en Europe, porté par les nouvelles indications' },
+                    { type: 'down', text: 'Échec de phase 3 du totukinumab : révision à la baisse du pipeline oncologie' },
+                    { type: 'neutral', text: 'Discussions en cours pour le rachat d\'un laboratoire de biotech américain' },
+                ],
+                sources: ['Boursorama', 'Zone Bourse'], updated: '18 min'
+            },
+            'OR.PA': {
+                logo: "L'O", name: "L'Oréal", ticker: 'OR.PA', sector: 'Consommation & Luxe',
+                sentiment: 'negative', sentimentLabel: '▼ Prudent',
+                summary: `L'Oréal traverse une <strong>période de consolidation</strong> après plusieurs trimestres 
+                    de croissance exceptionnelle. Le ralentissement du marché de la beauté en Chine pèse sur 
+                    les résultats de la division Luxe. Les analystes anticipent une <strong>croissance plus modérée</strong> 
+                    de +4% en 2026 vs +9% en 2025, entraînant des révisions à la baisse.`,
+                points: [
+                    { type: 'down', text: 'Division Luxe : ralentissement chinois avec -8% en Asie-Pacifique au T3' },
+                    { type: 'neutral', text: 'Division Grande Consommation résistante grâce au marché européen stable' },
+                    { type: 'up', text: 'Innovation Dermatologie Cosmétique (CeraVe) en forte croissance aux US (+18%)' },
+                ],
+                sources: ['Les Échos', 'Investir', 'Yahoo Finance'], updated: '22 min'
+            },
+            'TTE.PA': {
+                logo: 'TE', name: 'TotalEnergies', ticker: 'TTE.PA', sector: 'Énergie & Matériaux',
+                sentiment: 'positive', sentimentLabel: '▲ Positif',
+                summary: `TotalEnergies profite du <strong>rebond des cours du pétrole au-dessus de 78$/baril</strong> 
+                    et de ses investissements dans les énergies renouvelables qui commencent à générer des 
+                    revenus significatifs. Le groupe a annoncé un <strong>programme de rachat d'actions</strong> 
+                    de 2 milliards de dollars supplémentaires, signe de confiance du management.`,
+                points: [
+                    { type: 'up', text: 'Brent à 78$ : marge de raffinage en Europe en hausse de +15% vs T2' },
+                    { type: 'up', text: 'Mise en production du champ GNL Mozambique LNG prévue pour T1 2026' },
+                    { type: 'neutral', text: 'Transition énergétique : 30% des capex désormais alloués aux ENR' },
+                ],
+                sources: ['Les Échos', 'Reuters FR', 'BFM Bourse'], updated: '5 min'
+            }
+        };
+
+        function selectTicker(btn, ticker) {
+            document.querySelectorAll('.ai-ticker-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            showLoading(ticker);
+        }
+
+        function showLoading(ticker) {
+            const content = document.getElementById('aiContent');
+            content.innerHTML = `
+                <div class="ai-loading">
+                    <div class="ai-spinner"></div>
+                    <div class="ai-loading-text">Analyse des actualités RSS<br>et génération du résumé via Gemini API...</div>
+                </div>`;
+            setTimeout(() => renderSummary(ticker || getCurrentTicker()), 1400);
+        }
+
+        function getCurrentTicker() {
+            const active = document.querySelector('.ai-ticker-tab.active');
+            return active ? active.textContent.trim() : 'AI.PA';
+        }
+
+        function renderSummary(ticker) {
+            const d = aiData[ticker];
+            if (!d) return;
+            const sentimentClass = d.sentiment;
+            const pointsHTML = d.points.map(p => `
+                <div class="ai-key-point">
+                    <div class="ai-key-point-icon ${p.type}">${p.type === 'up' ? '↑' : p.type === 'down' ? '↓' : '–'}</div>
+                    <span>${p.text}</span>
+                </div>`).join('');
+            const sourcesHTML = d.sources.map(s => `<span class="ai-source-tag">${s}</span>`).join('');
+
+            document.getElementById('aiContent').innerHTML = `
+                <div class="ai-summary-card">
+                    <div class="ai-stock-header">
+                        <div class="ai-stock-logo">${d.logo}</div>
+                        <div>
+                            <div class="ai-stock-name">${d.name}</div>
+                            <div class="ai-stock-ticker">${d.ticker} · ${d.sector}</div>
+                        </div>
+                        <div class="ai-sentiment ${sentimentClass}">${d.sentimentLabel}</div>
+                    </div>
+                    <div class="ai-summary-text">${d.summary}</div>
+                    <div class="ai-key-points">${pointsHTML}</div>
+                    <div class="ai-sources">
+                        <span class="ai-sources-label">Sources :</span>
+                        ${sourcesHTML}
+                    </div>
+                </div>
+                <div class="ai-footer">
+                    <div class="ai-timestamp">⏱ Mis à jour il y a ${d.updated}</div>
+                    <div class="ai-powered">via <span>Gemini API</span></div>
+                </div>`;
+        }
+    </script>
+</body>
+</html>

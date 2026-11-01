@@ -1,195 +1,126 @@
-// Yahoo Finance HTTP access, ticker resolution, and response parsing.
-window.YahooFinanceService = (() => {
-    const REQUEST_TIMEOUT_MS = 2000;
+# AG Bourse & Actualités RSS
 
-    const ISIN_TO_YAHOO = {
-        "FR0000120073": "AI.PA",
-        "FR0000121014": "MC.PA",
-        "FR0013412020": "PAEEM.PA",
-        "FR0000121972": "SU.PA",
-        "FR0000120578": "SAN.PA",
-        "FR0000120321": "OR.PA",
-        "NL0000226223": "STMPA.PA",
-        "FR0000120271": "TTE.PA",
-        "FR0000133308": "ORA.PA",
-        "FR0010208488": "ENGI.PA",
-        "FR0010220475": "ALO.PA",
-        "FR0000131104": "BNP.PA",
-        "NL0000235190": "AIR.PA",
-        "FR0014004L86": "AM.PA",
-        "FR0014003TT8": "DSY.PA",
-        "FR0013451333": "FDJU.PA",
-        "NL00150001Q9": "STLAM.MI"
-    };
+AG_RSS_bourse est un tableau de bord financier interactif conçu pour suivre un portefeuille d’actions, analyser les performances en temps réel et synthétiser les actualités market autour des valeurs détenues.
 
-    function getTickerForIsin(isin) {
-        return ISIN_TO_YAHOO[(isin || '').trim().toUpperCase()] || null;
-    }
+Le projet a été conçu en HTML5, CSS3 vanilla et JavaScript ES6+, sans dépendance lourde ni framework front-end. Il s’agit d’un prototype fonctionnel / démonstrateur exploitable directement dans le navigateur.
 
-    function getTickerForEuronext(euronextTicker) {
-        const symbol = (euronextTicker || '').trim().toUpperCase();
-        if (!symbol) return null;
-        return symbol.endsWith('.PA') ? symbol : `${symbol}.PA`;
-    }
+---
 
-    function getRequestUrls(targetUrl) {
-        const encodedUrl = encodeURIComponent(targetUrl);
-        return [
-            // URL directe (fonctionne hors Chrome/file://)
-            targetUrl,
-            // corsproxy.io — format correct sans "url="
-            `https://corsproxy.io/?${targetUrl}`,
-            // thingproxy — fiable, pas de rate-limit strict
-            `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
-            // allorigins.win en dernier recours (peut être rate-limité)
-            `https://api.allorigins.win/get?url=${encodedUrl}`
-        ];
-    }
+## 🎯 Objectif du projet
 
-    async function fetchChart(ticker) {
-        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5d&interval=1d`;
+L’application permet de :
 
-        // On tente les 3 URLs (directe + proxies CORS) pour compatibilité Chrome
-        for (const url of getRequestUrls(targetUrl)) {
-            try {
-                const response = await fetchWithTimeout(url);
-                if (!response.ok) continue;
+- importer un portefeuille depuis un export CSV EasyBourse,
+- visualiser les positions, performances et valorisations,
+- simuler les variations de cours en temps réel,
+- tracer l’évolution d’une valeur via des graphiques interactifs,
+- suivre des actualités financières RSS filtrées par portefeuille,
+- explorer une option d’analyse IA par valeur pour résumer les tendances du marché.
 
-                const payload = await response.json();
-                const data = typeof payload.contents === 'string'
-                    ? JSON.parse(payload.contents)
-                    : payload;
-                const result = data?.chart?.result?.[0];
-                if (result) return result;
-            } catch (error) {
-                // Try the next direct or CORS-proxy endpoint.
-            }
-        }
+---
 
-        return null;
-    }
+## 🚀 Lancement rapide
 
-    async function fetchCharts(tickers) {
-        const symbols = [...new Set(tickers.filter(Boolean))];
-        if (symbols.length === 0) return new Map();
+Aucune installation ni compilation n’est requise.
 
-        const targetUrl = `https://query1.finance.yahoo.com/v7/finance/spark?symbols=${encodeURIComponent(symbols.join(','))}&range=1d&interval=1m`;
+### Option 1 : ouvrir directement
+1. Ouvrez le fichier [index.html](index.html) dans un navigateur moderne.
+2. L’application se charge directement.
 
-        for (const url of getRequestUrls(targetUrl)) {
-            try {
-                const response = await fetchWithTimeout(url);
-                if (!response.ok) continue;
+### Option 2 : serveur local
+Si le navigateur bloque certains chargements avec le protocole local, lancez un petit serveur :
 
-                const payload = await response.json();
-                const data = typeof payload.contents === 'string'
-                    ? JSON.parse(payload.contents)
-                    : payload;
-                const sparkResults = data?.spark?.result;
-                const resultBySymbol = Array.isArray(sparkResults)
-                    ? Object.fromEntries(sparkResults.filter(result => result?.symbol).map(result => [result.symbol, result]))
-                    : data;
-                const quotes = new Map();
+```bash
+python -m http.server 8000
+```
 
-                for (const symbol of symbols) {
-                    const matchingKey = Object.keys(resultBySymbol || {}).find(key => key.toUpperCase() === symbol.toUpperCase());
-                    const entry = resultBySymbol?.[symbol] || resultBySymbol?.[matchingKey];
-                    const sparkResult = Array.isArray(entry) ? entry[0] : entry;
-                    const result = sparkResult?.response?.[0] || sparkResult;
-                    const meta = result?.meta || sparkResult?.meta;
-                    const closes = result?.indicators?.quote?.[0]?.close || [];
-                    const lastClose = [...closes].reverse().find(value => typeof value === 'number' && Number.isFinite(value));
-                    const price = meta?.regularMarketPrice ?? lastClose;
+Puis ouvrez :
 
-                    if (meta && typeof price === 'number' && Number.isFinite(price) && price > 0) {
-                        quotes.set(symbol, {
-                            ...result,
-                            meta: { ...meta, regularMarketPrice: price }
-                        });
-                    }
-                }
+```text
+http://localhost:8000
+```
 
-                if (quotes.size > 0) return quotes;
-            } catch (error) {
-                // Try the next direct or CORS-proxy endpoint.
-            }
-        }
+---
 
-        return new Map();
-    }
+## 📊 Fonctionnalités principales
 
-    function getPreviousClose(result) {
-        const meta = result?.meta || {};
-        const previousClose = [
-            meta.regularMarketPreviousClose,
-            meta.previousClose,
-            meta.chartPreviousClose
-        ].find(value => typeof value === 'number' && Number.isFinite(value) && value > 0);
+### 1. Portefeuille et import EasyBourse
+- import d’un fichier CSV exporté depuis EasyBourse,
+- lecture des positions et de leurs métriques,
+- calcul des variations de valeur,
+- masquage du numéro de compte pour préserver la confidentialité.
 
-        return previousClose || null;
-    }
+### 2. Simulation temps réel
+- fluctuations dynamiques des cours,
+- recalcul automatique des gains/pertes latents,
+- mise à jour des valorisations et des indicateurs de performance.
 
-    function getDailyChangePercent(result, price) {
-        const previousClose = getPreviousClose(result);
-        if (previousClose) return ((price - previousClose) / previousClose) * 100;
+### 3. Graphiques d’évolution
+- visualisation d’une action sélectionnée,
+- sélection de périodes : 1J, 1S, 1M, 1A,
+- affichage de référence du prix de revient unitaire (PRU).
 
-        const directChange = result?.meta?.regularMarketChangePercent;
-        return typeof directChange === 'number' && Number.isFinite(directChange)
-            ? directChange
-            : null;
-    }
+### 4. Actualités RSS liées au portefeuille
+- récupération de flux financiers,
+- association des articles aux titres du portefeuille,
+- filtrage par portefeuille ou par recherche,
+- mise en avant des nouvelles pertinentes.
 
-    async function resolveTicker(stock) {
-        const knownTicker = getTickerForIsin(stock.isin);
-        if (knownTicker) return { symbol: knownTicker, quoteType: 'EQUITY' };
+### 5. Analyse IA par valeur
+Le projet inclut une maquette fonctionnelle d’un widget d’analyse IA :
 
-        const euronextTicker = getTickerForEuronext(stock.euronextTicker);
-        if (euronextTicker) return { symbol: euronextTicker, quoteType: null };
+- sélection d’une valeur dans le portefeuille,
+- résumé synthétique de l’actualité autour de cette action,
+- sentiment global (positif / neutre / négatif),
+- points clés et sources mentionnées,
+- bouton de rafraîchissement et état de chargement.
 
-        const candidate = (stock.yahooTicker || stock.ticker || '').trim().toUpperCase();
-        if (candidate && !/^[A-Z]{2}\d{10}$/.test(candidate)) return { symbol: candidate, quoteType: null };
+La maquette est visible dans [preview_optionF_ia.html](preview_optionF_ia.html).
 
-        const queries = [stock.isin, stock.name].filter(Boolean);
-        for (const value of queries) {
-            const query = encodeURIComponent(value);
-            const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${query}&quotesCount=10&newsCount=0`;
+---
 
-            for (const url of getRequestUrls(searchUrl)) {
-                try {
-                    const response = await fetchWithTimeout(url);
-                    if (!response.ok) continue;
+## 🧩 Structure du projet
 
-                    const payload = await response.json();
-                    const data = typeof payload.contents === 'string'
-                        ? JSON.parse(payload.contents)
-                        : payload;
-                    const quote = data?.quotes?.find(item => item.symbol && item.quoteType === 'EQUITY')
-                        || data?.quotes?.find(item => item.symbol);
-                    if (quote?.symbol) return { symbol: quote.symbol, quoteType: quote.quoteType || null };
-                } catch (error) {
-                    // Try the next direct or CORS-proxy endpoint.
-                }
-            }
-        }
+- [index.html](index.html) : structure principale du dashboard
+- [style.css](style.css) : design system, composants visuels et animations
+- [app.js](app.js) : logique applicative, gestion du portefeuille et simulation
+- [chart-manager.js](chart-manager.js) : gestion des graphiques
+- [rss-parser.js](rss-parser.js) : récupération et filtrage des actualités RSS
+- [yahoo-service.js](yahoo-service.js) : service de récupération de données de marché
+- [preview_optionF_ia.html](preview_optionF_ia.html) : maquette de prévisualisation du module IA
+- [project_spec.md](project_spec.md) : cahier des charges / spécifications
+- [nouvelle specifications graphiques](nouvelle%20specifications%20graphiques) : documents visuels et évolutions de design
 
-        return null;
-    }
+---
 
-    async function fetchWithTimeout(url) {
-        const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-        try {
-            return await fetch(url, { signal: controller.signal });
-        } finally {
-            window.clearTimeout(timeoutId);
-        }
-    }
+## 🛠️ État actuel
 
-    return Object.freeze({
-        fetchChart,
-        fetchCharts,
-        getDailyChangePercent,
-        getTickerForIsin,
-        getTickerForEuronext,
-        resolveTicker
-    });
-})();
+Le projet est aujourd’hui davantage qu’un simple dashboard boursier : il présente également une vision plus “produit” avec une UX pensée pour l’investisseur, des synthèses de marché et une orientation IA.
+
+La documentation et les maquettes montrent une évolution claire vers :
+
+- un produit financier plus premium,
+- une interface plus orientée décisions et analyse,
+- un module IA de lecture d’actualité par valeur.
+
+---
+
+## 📌 Points importants
+
+- le projet est pensé pour fonctionner sans backend,
+- les données de marché peuvent être simulées ou récupérées via services externes,
+- la confidentialité des données utilisateur est respectée,
+- la structure est facilement extensible pour ajouter de nouvelles fonctions.
+
+---
+
+## 🤝 Utilisation
+
+Ce dépôt peut être utilisé comme :
+
+- démonstrateur technique,
+- prototype de produit financier,
+- base pour un tableau de bord boursier plus complet,
+- support de réflexion pour l’intégration d’un assistant IA contextuel.
+
+Si tu veux aller plus loin, le prochain grand axe est de connecter le widget IA à une vraie API d’analyse (Gemini, OpenAI ou équivalent) et d’intégrer les données RSS plus directement dans la logique de décision du portefeuille.
