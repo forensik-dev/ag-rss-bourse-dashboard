@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="hybrid">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="description"
+        content="Tableau de bord financier EasyBourse : suivi de portefeuille intraday en direct, import CSV, allocation sectorielle et flux d'actualités boursières.">
+    <title>EASY BOURSE - Suivi de Portefeuille & Actualités Intraday</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css?v=20260928-5">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 1. Barre de navigation haute (Header sombre) -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="brand">
+                    <div class="logo-badge">
+                        <span class="logo-eb">EB</span>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">EASY BOURSE</span>
+                        <span class="brand-subtitle">PORTAIL INVESTISSEUR</span>
+                    </div>
+                </div>
+
+                <!-- Onglets de navigation -->
+                <nav class="nav-tabs" aria-label="Navigation principale">
+                    <button class="nav-tab active" id="tab-btn-portfolio" data-target="portfolio-view">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                        Portefeuilles
+                    </button>
+                    <button class="nav-tab" id="tab-btn-news" data-target="news-view">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path>
+                            <path d="M18 14h-8"></path>
+                            <path d="M15 18h-5"></path>
+                            <path d="M10 6h8v4h-8V6Z"></path>
+                        </svg>
+                        Actualités
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Profil client & Actions Header -->
+            <div class="header-right">
+                <button type="button" class="yahoo-countdown" id="yahoo-countdown" title="Actualiser les cours" aria-label="Actualiser les cours" aria-live="polite">
+                    <img src="https://finance.yahoo.com/favicon.ico" alt="">
+                    <strong>15 s</strong>
+                </button>
+                <button id="theme-toggle-btn" class="icon-button" title="Basculer thème clair/sombre" aria-label="Basculer thème">
+                    <svg id="theme-icon-sun" class="theme-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+
+                <div class="user-profile">
+                    <div class="profile-avatar">DEMO</div>
+                    <div class="profile-details">
+                        <span class="profile-role">Compte de démonstration</span>
+                        <span class="profile-badge"><span class="pulse-dot"></span> Marchés ouverts</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. Bandeau Boursier Vivant (Défilé Continu / Ticker tape) -->
+        <div class="ticker-tape-wrapper" id="ticker-tape-wrapper">
+            <div class="ticker-tape-track" id="ticker-tape-track">
+                <!-- Les cartes d'indices seront injectées et répétées dynamiquement en JS -->
+                <div class="ticker-tape-item" id="ticker-cac">
+                    <span class="ticker-symbol">CAC 40</span>
+                    <span class="ticker-price">7 624,30</span>
+                    <span class="ticker-change val-positive">+0,42%</span>
+                </div>
+                <div class="ticker-tape-item" id="ticker-sbf">
+                    <span class="ticker-symbol">SBF 120</span>
+                    <span class="ticker-price">5 780,15</span>
+                    <span class="ticker-change val-positive">+0,38%</span>
+                </div>
+                <div class="ticker-tape-item" id="ticker-dax">
+                    <span class="ticker-symbol">DAX</span>
+                    <span class="ticker-price">18 512,80</span>
+                    <span class="ticker-change val-positive">+0,55%</span>
+                </div>
+                <div class="ticker-tape-item" id="ticker-ndx">
+                    <span class="ticker-symbol">Nasdaq 100</span>
+                    <span class="ticker-price">19 820,40</span>
+                    <span class="ticker-change val-negative">-0,24%</span>
+                </div>
+                <div class="ticker-tape-item" id="ticker-btc">
+                    <span class="ticker-symbol">Bitcoin (EUR)</span>
+                    <span class="ticker-price">58 450 €</span>
+                    <span class="ticker-change val-positive">+1,85%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Barre d'outils (Sur la même ligne : Recherche + Actions) -->
+        <div class="toolbar-section">
+            <div class="toolbar-search">
+                <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="watchlist-search" placeholder="Rechercher une valeur, un ticker ISIN..." aria-label="Rechercher une valeur">
+            </div>
+
+            <div class="toolbar-actions">
+                <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+                <button id="import-btn" class="btn btn-primary" title="Charger un export EasyBourse">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Importer fichier CSV Intraday
+                </button>
+
+                <button id="open-add-modal-btn" class="btn btn-outline" title="Ajouter une valeur manuellement">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Ajouter valeur
+                </button>
+
+                <button id="reset-portfolio-btn" class="btn btn-ghost-danger" style="display: none;" title="Réinitialiser le portefeuille">
+                    Réinitialiser
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. Contenu Principal : Vues SPA -->
+        <main class="main-content">
+            <!-- Vue Portefeuilles -->
+            <div id="portfolio-view" class="tab-view active">
+                <div class="dashboard-layout">
+                    <!-- Zone Principale (Gauche) : Tableau des Positions Actives -->
+                    <section class="panel positions-panel">
+                        <div class="positions-header">
+                            <div class="positions-title-group">
+                                <h2>Positions Actives</h2>
+                                <span class="badge-count" id="positions-count-badge">7 Valeurs</span>
+                            </div>
+                            <div class="live-status-indicator">
+                                <span class="live-dot pulse"></span>
+                                <span class="live-label">Prix mis à jour en temps réel</span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="positions-table" id="watchlist-table">
+                                <colgroup>
+                                    <col class="column-name">
+                                    <col span="8" class="column-data">
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th class="align-left">VALEUR / NOM</th>
+                                        <th class="align-right">COURS</th>
+                                        <th class="align-right">(UPDATE)</th>
+                                        <th class="align-right">QTE</th>
+                                        <th class="align-right">PRU (ACHAT)</th>
+                                        <th class="align-right">VAR. JOUR %</th>
+                                        <th class="align-right">+/- VALUE LATENTE</th>
+                                        <th class="align-right">VALORISATION</th>
+                                        <th class="align-center action-col"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="watchlist-body">
+                                    <!-- Lignes injectées dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Panneau Latéral Droit (Widgets condensés) -->
+                    <aside class="panel-sidebar">
+                        <!-- Widget 1: Synthèse Portefeuille -->
+                        <div class="card widget-card widget-summary">
+                            <div class="widget-header">
+                                <h3>Synthèse Portefeuille</h3>
+                                <button class="btn-help" id="help-summary-btn" title="Informations sur la valorisation">
+                                    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.2" fill="none">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="metrics-grid">
+                                <div class="metric-item">
+                                    <span class="metric-label">Cumul des versements</span>
+                                    <input class="metric-value metric-input" id="res-total-invested" type="number" min="0" step="0.01" placeholder="À renseigner" aria-label="Total investi">
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Total des achats</span>
+                                    <span class="metric-value" id="res-total-purchases">0,00 €</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Solde Liquidités</span>
+                                    <span class="metric-value" id="res-cash-balance">2 150,00 €</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Valorisation en cours</span>
+                                    <div class="current-valuation-line">
+                                        <span class="metric-value" id="res-current-portfolio-valuation">0,00 €</span>
+                                        <span class="performance-badge global-return-value val-positive" id="res-grid-global-return">(+0,00%)</span>
+                                    </div>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Valeur brute</span>
+                                    <span class="metric-value gross-value" id="res-gross-value" aria-live="polite"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Widget 3: Actualités Boursières (Condensé) -->
+                        <div class="card widget-card widget-news">
+                            <div class="widget-header">
+                                <h3>Actualités Boursières</h3>
+                                <div class="mini-filter-tabs">
+                                    <button class="mini-tab active" id="filter-all-news-widget" data-feed="all">Toutes</button>
+                                    <button class="mini-tab" id="filter-portfolio-news-widget" data-feed="portfolio">Mon Portefeuille</button>
+                                </div>
+                            </div>
+                            <div class="condensed-news-list" id="condensed-news-list">
+                                <div class="news-loading-indicator">Chargement des actualités financières...</div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+
+            <!-- Vue Actualités (Complète) -->
+            <div id="news-view" class="tab-view" style="display: none;">
+                <div class="news-full-layout">
+                    <div class="news-full-header">
+                        <div>
+                            <h2>Actualités Financières & Analyses de Marché</h2>
+                            <p class="news-subtitle">Flux en direct agrégés depuis Boursorama, Les Échos et Yahoo Finance</p>
+                        </div>
+                        <div class="news-full-controls">
+                            <input type="text" id="news-search-input" placeholder="Filtrer les actualités par mot-clé..." class="news-search-field">
+                            <div class="news-feed-buttons">
+                                <button class="btn btn-filter active" data-filter="all">Tous les flux</button>
+                                <button class="btn btn-filter" data-filter="portfolio">Liées au portefeuille</button>
+                            </div>
+                            <button id="refresh-news-full-btn" class="btn btn-secondary">
+                                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+                                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                                </svg>
+                                Actualiser les flux
+                            </button>
+                        </div>
+                    </div>
+                    <div class="news-cards-grid" id="full-news-cards-grid">
+                        <!-- Articles complets injectés via JS -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal : Ajouter une valeur manuellement -->
+    <div class="modal-overlay" id="add-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Ajouter une valeur à la Watchlist</h3>
+                <button class="modal-close" id="close-add-modal-btn">&times;</button>
+            </div>
+            <form id="add-ticker-form" class="modal-form">
+                <div class="form-group">
+                    <label for="new-ticker-name">Nom de la valeur (ex: TotalEnergies)</label>
+                    <input type="text" id="new-ticker-name" placeholder="Nom de l'entreprise" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-ticker-isin">Code ISIN / Ticker (ex: FR0000120271)</label>
+                        <input type="text" id="new-ticker-isin" placeholder="Code ISIN" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-ticker-qty">Quantité</label>
+                        <input type="number" id="new-ticker-qty" placeholder="Ex: 50" min="1" step="1" value="10" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-ticker-pru">PRU d'achat (€)</label>
+                        <input type="number" id="new-ticker-pru" placeholder="Ex: 55.40" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-ticker-price">Cours actuel (€)</label>
+                        <input type="number" id="new-ticker-price" placeholder="Ex: 58.20" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" id="cancel-add-btn">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter la position</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal : Explication Synthèse -->
+    <div class="modal-overlay" id="help-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>Comprendre votre synthèse financière</h3>
+                <button class="modal-close" id="close-help-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size: 13.5px; line-height: 1.6; color: var(--text-secondary);">
+                <p><strong>Cumul des versements :</strong> Montant total des versements effectués sur le compte. Cette valeur est saisie manuellement.</p>
+                <p style="margin-top: 10px;"><strong>Total des achats :</strong> Somme des achats de toutes les positions, calculée avec la quantité multipliée par le PRU de chaque valeur.</p>
+                <p style="margin-top: 10px;"><strong>Solde Liquidités :</strong> Espèces actuellement disponibles sur le compte.</p>
+                <p style="margin-top: 10px;"><strong>Valorisation en cours :</strong> Valeur actuelle du portefeuille, calculée avec les derniers cours Yahoo Finance disponibles, à laquelle sont ajoutées les liquidités.</p>
+                <p style="margin-top: 10px;"><strong>Valeur brute :</strong> Valorisation en cours moins le cumul des versements. Le pourcentage entre parenthèses correspond à cette différence rapportée au cumul des versements.</p>
+                <p style="margin-top: 10px;"><strong>Plus-value latente :</strong> Écart entre la valorisation en cours et le total des achats, exprimé en pourcentage du total des achats. Vert signifie positif, rouge signifie négatif.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic Scripts -->
+    <script src="rss-parser.js"></script>
+    <script src="yahoo-service.js?v=20260928-3"></script>
+    <script src="app.js?v=20260928-11"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" nonce="0GbR03OJjsDJC8R7IN7KRw==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+</body>
+
+</html>
